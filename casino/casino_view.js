@@ -1,36 +1,44 @@
-// views/casino_view.js
-
 import formatCurrency from "../services/format_currency.js";
-
 class CasinoView {
     static positionDictionary = {
-        1: { name: "Гореносец", emoji: "🧟‍♂️", pronouns: "ты" },
-        2: { name: "Изувер", emoji: "🎭", pronouns: "ты" },
-        3: { name: "Местный Бог", emoji: "⛩", pronouns: "ты" },
-        4: { name: "Правая рука", emoji: "🫴🏼", pronouns: "ты" },
-        5: { name: "Созидатель", emoji: "🤴🏻", pronouns: "Вы" },
+        1: { emoji: "🧟‍♂️", pronouns: "ты" },
+        2: { emoji: "🎭", pronouns: "ты" },
+        3: { emoji: "⛩", pronouns: "ты" },
+        4: { emoji: "🫴🏼", pronouns: "ты" },
+        5: { emoji: "🤴🏻", pronouns: "Вы" },
     };
 
     static getHelpMessage() {
         return (
-            "Для игры в казино введи команду в формате:\n" +
-            "казино [тип ставки] [сумма/все/процент/суффикс]\n\n" +
-            "Примеры:\n" +
-            "казино кр 100\n" +
-            "казино д1 все\n" +
-            "казино зеленый 10млн\n" +
-            "казино черный 50%\n\n" +
-            "Допустимые типы суффиксов:\n" +
-            "к = 1,000.00 | млн = 1,000,000.00 | млрд = 1,000,000,000.00 | трлн = 1,000,000,000,000.00 | квадр = 1,000,000,000,000,000.00\n" +
-            "Допустимые типы ставок:\n" +
-            "кр/красный | чр/черный | зл/зеленый | чт/четное | нч/нечетное | д1/дюжина1 | д2/дюжина2 | д3/дюжина3"
+            "<b>📃 Справочник для игры в казино:</b>\n" +
+            "  –   Команда: <code>казино</code> <code>[ставка]</code> <code>[сумма]</code>\n" +
+            "  –   Cуффиксы: <code>к/млн/млрд/трлн/квадр</code>\n" +
+            "  –   Ставки: <code>кр/красный</code>\n" +
+            `                     <code>чр/черный</code>\n` +
+            `                     <code>зл/зеленый</code>\n` +
+            `                     <code>чт/четное</code>\n` +
+            `                     <code>нч/нечетное</code>\n` +
+            `                     <code>д1/дюжина1</code>\n` +
+            `                     <code>д2/дюжина2</code>\n` +
+            `                     <code>д3/дюжина3</code>\n` +
+            "  –   Примеры: <code>казино кр 100</code>\n" +
+            `                         <code>казино кр 100</code>\n` +
+            `                         <code>казино черный 50%</code>\n` +
+            `                         <code>казино д1 все</code>\n` +
+            `                         <code>казино зеленый 10млн</code>\n`
         );
     }
 
     static getInvalidBetTypeMessage() {
         return (
-            "Пожалуйста, укажи корректный тип ставки:\n" +
-            "кр/красный | чр/черный | зл/зеленый | чт/четное | нч/нечетное | д1/дюжина1 | д2/дюжина2 | д3/дюжина3"
+            `<b>📃 Допустимые ставки:</b> ` +
+            `<code>чр/черный</code>, ` +
+            `<code>зл/зеленый</code>, ` +
+            `<code>чт/четное</code>, ` +
+            `<code>нч/нечетное</code>, ` +
+            `<code>д1/дюжина1</code>, ` +
+            `<code>д2/дюжина2</code>, ` +
+            `<code>д3/дюжина3</code>`
         );
     }
 
@@ -39,7 +47,6 @@ class CasinoView {
         const positionEmoji = positionData.emoji;
         const pronouns = positionData.pronouns;
 
-        // Adjust the winning message format based on pronouns
         return (
             `${positionEmoji} <b>${userName || "Игрок"}, ${pronouns === "ты" ? "ты ВЫИГРАЛ:" : "Вы ВЫИГРАЛИ:"}</b>` +
             `\n  –   <code>${formatCurrency(payout)}</code>` +
@@ -56,7 +63,6 @@ class CasinoView {
         const positionEmoji = positionData.emoji;
         const pronouns = positionData.pronouns;
 
-        // Adjust the losing message format based on pronouns
         return (
             `${positionEmoji} <b>${userName || "Игрок"}, ${pronouns === "ты" ? "ты ПРОИГРАЛ:" : "Вы ПРОИГРАЛИ:"}</b>` +
             `\n  –   <code>${formatCurrency(betAmount)}</code>` +
@@ -72,11 +78,11 @@ class CasinoView {
     }
 
     static getDepositHelpMessage() {
-        return `<b>❔ Как пополнить баланс казино:</b>\n` + `  –   <code>пополнить казино <сумма></code>`;
+        return `<b>❔ Как пополнить баланс казино:</b>\n` + `  –   Команда <code>пополнить казино <сумма></code>`;
     }
 
     static getWithdrawHelpMessage() {
-        return `<b>❔ Как вывести баланс из казино:</b>\n` + `  –   <code>вывести казино <сумма></code>`;
+        return `<b>❔ Как вывести баланс из казино:</b>\n` + `  –   Команда <code>вывести казино <сумма></code>`;
     }
 
     static getDepositSuccessMessage(userName, amount, newCasinoBalance, newBankAmount) {
@@ -97,9 +103,11 @@ class CasinoView {
         );
     }
 
-    static getBookmakerOptionsMessage() {
+    static getBookmakerOptionsMessage(position, user) {
+        const positionData = this.positionDictionary[position] || { name: "Игрок", emoji: "🎲", pronouns: "ты" };
+        const pronouns = positionData.pronouns;
         return (
-            `🃏 <b>Выберите букмекера (смена раз в сутки):</b>` +
+            `🃏 <b>${pronouns === "ты" ? "Выбери" : "Выберите"} букмекера (смена раз в сутки):</b>` +
             `\n  –   2Y: <code>малые шансы, высокая скорость</code>` +
             `\n  –   DOWNY: <code>большие шансы, низкая скорость</code>` +
             `\n  –   BLINOV: <code>большие шансы, высокая скорость</code>` +
@@ -110,28 +118,47 @@ class CasinoView {
     static getUnknownBookmakerMessage(bookmaker) {
         return (
             `🃏 <b>Неизвестный букмекер:</b> <code>${bookmaker}</code>` +
-            `\n  –   Пожалуйста, выберите одного из предложенных букмекеров.`
+            `\n  –   Возможные букмекеры: <code>2Y</code>, <code>DOWNY</code>, <code>BLINOV</code>, <code>TUNDR9</code>`
         );
     }
 
-    static getHoursLeftMessage(hoursLeft) {
+    static getHoursLeftMessage(hoursLeft, position, user) {
+        const positionData = this.positionDictionary[position] || { name: "Игрок", emoji: "🎲", pronouns: "ты" };
+        const name = user.user_name;
+        const pronouns = positionData.pronouns;
         return (
-            `🃏 <b>Вы можете сменить букмекера только раз в сутки</b>` +
+            `🃏 <b>${name}, ${pronouns === "ты" ? "ты можешь" : "Вы можете"} сменить букмекера только раз в сутки</b>` +
             `\n  –   Следующая смена будет доступна через: <code>${hoursLeft} часов</code>`
         );
     }
 
-    static getBookmakerSelectedMessage(bookmaker, casino_chance, casino_commission, casino_coefficient) {
+    static getBookmakerSelectedMessage(
+        bookmaker,
+        casino_chance,
+        casino_commission,
+        casino_coefficient,
+        position,
+        user
+    ) {
+        const positionData = this.positionDictionary[position] || { name: "Игрок", emoji: "🎲", pronouns: "ты" };
+        const name = user.user_name;
+        const pronouns = positionData.pronouns;
         return (
-            `🃏 <b>Вы выбрали букмекера:</b> <code>${bookmaker}</code>` +
+            `🃏 <b>${name}, ${
+                pronouns === "ты" ? "ты выбрал" : "Вы выбрали"
+            } букмекера:</b> <code>${bookmaker}</code>` +
             `\n  –   Описание: <code>${casino_chance}% шанс, комиссия: ${casino_commission}%</code>` +
             `\n  –   Коэффициент: <code>${casino_coefficient}</code>`
         );
     }
 
-    static getErrorNoCasinoMessage() {
+    static getErrorNoCasinoMessage(position, user) {
+        const positionData = this.positionDictionary[position] || { name: "Игрок", emoji: "🎲", pronouns: "ты" };
+        const name = user.user_name;
+        const pronouns = positionData.pronouns;
         return (
-            "Вы не выбрали букмекера. Пожалуйста, выберите букмекера командой <code>букмекер</code>."
+            `<b>🫥 ${name}, ${pronouns === "ты" ? "ты не выбрал" : "Вы не выбрали"} букмекера :(</b>\n` +
+            `  –   Команда: <code>букмекер [букмекер]</code>`
         );
     }
 }
