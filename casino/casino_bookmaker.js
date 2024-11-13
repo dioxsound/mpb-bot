@@ -6,9 +6,9 @@ import CasinoView from "./casino_view.js";
 export default class CasinoBookmaker {
     static bookmakers = {
         "2Y": { casino_coefficient: 0.8, casino_chance: 95, casino_commission: 10 },
-        DOWNY: { casino_coefficient: 1.5, casino_chance: 80, casino_commission: 15 },
-        BLINOV: { casino_coefficient: 1.2, casino_chance: 80, casino_commission: 30 },
-        TUNDR9: { casino_coefficient: 0.8, casino_chance: 100, casino_commission: 5 },
+        "DOWNY": { casino_coefficient: 1.5, casino_chance: 80, casino_commission: 15 },
+        "BLINOV": { casino_coefficient: 1.2, casino_chance: 80, casino_commission: 30 },
+        "TUNDR9": { casino_coefficient: 0.8, casino_chance: 100, casino_commission: 5 },
     };
 
     /**
@@ -18,13 +18,16 @@ export default class CasinoBookmaker {
     static async chooseBookmaker(context) {
         try {
             await UserService.addUserIfNotExists(context);
-
+            const userId = context.from.id;
+            const user = await UserService.findUserById(userId);
+            const position = user.user_position;
             const bookmakerInput = context.text.split(" ")[1];
             const bookmaker = bookmakerInput ? bookmakerInput.toUpperCase() : null;
 
             if (!bookmaker) {
                 // Вызов метода CasinoView с ()
-                return await context.send(CasinoView.getBookmakerOptionsMessage(), { parse_mode: "HTML" });
+                return await context.send(CasinoView.getBookmakerOptionsMessage(position,
+                    user), { parse_mode: "HTML" });
             }
 
             const selectedBookmaker = CasinoBookmaker.bookmakers[bookmaker];
@@ -43,7 +46,8 @@ export default class CasinoBookmaker {
                 if (diffInHours < 24) {
                     const hoursLeft = 24 - Math.floor(diffInHours);
                     // Вызов метода с передачей параметра
-                    return await context.send(CasinoView.getHoursLeftMessage(hoursLeft), { parse_mode: "HTML" });
+                    return await context.send(CasinoView.getHoursLeftMessage(hoursLeft, position,
+                        user), { parse_mode: "HTML" });
                 }
             }
 
@@ -60,7 +64,9 @@ export default class CasinoBookmaker {
                     bookmaker,
                     selectedBookmaker.casino_chance,
                     selectedBookmaker.casino_commission,
-                    selectedBookmaker.casino_coefficient
+                    selectedBookmaker.casino_coefficient,
+                    position,
+                    user
                 ),
                 { parse_mode: "HTML" }
             );
