@@ -108,8 +108,9 @@ class Casino {
         }
 
         const casinoData = await CasinoService.findCasinoByUserID(userId);
+        const position = user.user_position;
         if (!casinoData || !casinoData.casino_bookmaker) {
-            context.send(CasinoView.getErrorNoCasinoMessage);
+            return await context.send(CasinoView.getErrorNoCasinoMessage(position, user), { parse_mode: "HTML" });
         }
 
         let casinoBalance = parseFloat(casinoData.casino_balance);
@@ -178,7 +179,7 @@ class Casino {
             const depositResult = await CasinoService.depositToCasino(userId, amount);
             const user = await UserService.findUserById(userId);
 
-            context.reply(
+            await context.reply(
                 CasinoView.getDepositSuccessMessage(
                     user.user_name,
                     formatCurrency(amount),
@@ -188,7 +189,7 @@ class Casino {
                 { parse_mode: "HTML" }
             );
         } catch (error) {
-            context.reply(CasinoView.getErrorMessage(error.message));
+            await context.reply(CasinoView.getErrorMessage(error.message));
         }
     }
 
@@ -204,11 +205,13 @@ class Casino {
         const amountStr = args[2];
         const userId = context.from.id;
         const casinoData = await CasinoService.findCasinoByUserID(userId);
+        const user = await UserService.findUserById(context.from.id);
+        const position = user.user_position;
         if (!casinoData || !casinoData.casino_bookmaker) {
-            context.send(CasinoView.getErrorNoCasinoMessage);
+            return await context.send(CasinoView.getErrorNoCasinoMessage(position, user), { parse_mode: "HTML" });
         }
         if (!amountStr) {
-            return context.reply(CasinoView.getDepositHelpMessage(), { parse_mode: "HTML" });
+            return await context.reply(CasinoView.getDepositHelpMessage(), { parse_mode: "HTML" });
         }
 
         try {
@@ -219,7 +222,7 @@ class Casino {
 
             await Casino.depositToCasino(context, amount);
         } catch (error) {
-            context.reply(CasinoView.getErrorMessage(error.message));
+            await context.reply(CasinoView.getErrorMessage(error.message));
         }
     }
 
@@ -235,11 +238,13 @@ class Casino {
         const amountStr = args[2];
         const userId = context.from.id;
         const casinoData = await CasinoService.findCasinoByUserID(userId);
+        const user = await UserService.findUserById(context.from.id);
+        const position = user.user_position;
         if (!casinoData || !casinoData.casino_bookmaker) {
-            context.send(CasinoView.getErrorNoCasinoMessage);
+            return await context.send(CasinoView.getErrorNoCasinoMessage(position, user), { parse_mode: "HTML" });
         }
         if (!amountStr) {
-            return context.reply(CasinoView.getWithdrawHelpMessage());
+            return await context.reply(CasinoView.getWithdrawHelpMessage());
         }
 
         try {
@@ -252,7 +257,7 @@ class Casino {
             const withdrawResult = await CasinoService.withdrawFromCasino(userId, amount);
             const user = await UserService.findUserById(userId);
 
-            context.reply(
+            await context.reply(
                 CasinoView.getWithdrawSuccessMessage(
                     user.user_name,
                     formatCurrency(amount),
@@ -262,7 +267,7 @@ class Casino {
                 { parse_mode: "HTML" }
             );
         } catch (error) {
-            context.reply(CasinoView.getErrorMessage(error.message));
+            await context.reply(CasinoView.getErrorMessage(error.message));
         }
     }
 
@@ -283,15 +288,17 @@ class Casino {
         const betType = Constants.BET_TYPE_MAP[betTypeInput] || betTypeInput;
         const userId = context.from.id;
         const casinoData = await CasinoService.findCasinoByUserID(userId);
+        const user = await UserService.findUserById(context.from.id);
+        const position = user.user_position;
         if (!casinoData || !casinoData.casino_bookmaker) {
-            context.send(CasinoView.getErrorNoCasinoMessage);
+            return await context.send(CasinoView.getErrorNoCasinoMessage(position, user), { parse_mode: "HTML" });
         }
         if (!betTypeInput || !amountStr) {
-            return context.reply(CasinoView.getHelpMessage());
+            return await context.reply(CasinoView.getHelpMessage(), {parse_mode: "HTML"});
         }
 
         if (!Constants.VALID_BET_TYPES.has(betType)) {
-            return context.reply(CasinoView.getInvalidBetTypeMessage());
+            return await context.reply(CasinoView.getInvalidBetTypeMessage(), {parse_mode: "HTML"});
         }
 
         try {
@@ -299,7 +306,7 @@ class Casino {
             const user = await UserService.findUserById(context.from.id);
 
             if (response.win) {
-                context.reply(
+                await context.reply(
                     CasinoView.getWinMessage(
                         user.user_name,
                         response.payout,
@@ -312,7 +319,7 @@ class Casino {
                     { parse_mode: "HTML" }
                 );
             } else {
-                context.reply(
+                await context.reply(
                     CasinoView.getLoseMessage(
                         user.user_name,
                         response.betAmount,
@@ -325,7 +332,7 @@ class Casino {
                 );
             }
         } catch (error) {
-            context.reply(CasinoView.getErrorMessage(error.message));
+            await context.reply(CasinoView.getErrorMessage(error.message));
         }
     }
 }
