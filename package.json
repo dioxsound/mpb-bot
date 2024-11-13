@@ -1,0 +1,21 @@
+{
+  "name": "mpb-bot",
+  "version": "1.0.0",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "bot": "node app.js"
+  },
+  "keywords": [],
+  "author": "dioxsound <dioxsoundwork@gmail.com>",
+  "license": "ISC",
+  "description": "The gaming telegram bot and maybe even a graduate thesis project 🤯",
+  "dependencies": {
+    "@puregram/hear": "^2.1.0-rc.1",
+    "@puregram/markup": "^1.3.4",
+    "dotenv": "^16.4.5",
+    "fast-levenshtein": "^3.0.0",
+    "pg": "^8.13.1",
+    "puregram": "^2.26.6"
+  }
+}
