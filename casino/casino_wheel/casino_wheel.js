@@ -14,16 +14,16 @@ class Casino {
      */
     static parseBetAmount(amountStr) {
         const regex = /^(\d+(?:\.\d+)?)(к|тыс|м|млн|б|миллиард|т|трлн|кв|квадр)?$/i;
-        const match = amountStr.match(regex);
+        const match = amountStr.trim().match(regex);
 
-        if (match) {
-            const amount = parseFloat(match[1]);
-            const suffix = match[2] ? match[2].toLowerCase() : "";
-            const multiplier = Constants.AMOUNT_SUFFIXES[suffix] || 1;
-            return amount * multiplier;
+        if (!match) {
+            throw new Error("Некорректная сумма ставки");
         }
 
-        throw new Error("Некорректная сумма ставки");
+        const amount = parseFloat(match[1]);
+        const suffix = match[2] ? match[2].toLowerCase() : "";
+        const multiplier = Constants.AMOUNT_SUFFIXES[suffix] || 1;
+        return amount * multiplier;
     }
 
     /**
@@ -31,8 +31,12 @@ class Casino {
      * @returns {object} - Объект с номером и цветом сектора.
      */
     static spinWheel() {
-        const randomIndex = Math.floor(Math.random() * Constants.SECTORS.length);
-        return Constants.SECTORS[randomIndex];
+        const sectors = Constants.SECTORS;
+        if (!sectors.length) {
+            throw new Error("Секторы рулетки не определены");
+        }
+        const randomIndex = Math.floor(Math.random() * sectors.length);
+        return sectors[randomIndex];
     }
 
     /**
@@ -56,11 +60,10 @@ class Casino {
         };
 
         const multiplier = payoutMultipliers[betType] || 0;
-        let payout = betAmount * multiplier * coefficient;
+        const payout = betAmount * multiplier * coefficient;
         const commissionAmount = (payout * casino_commission) / 100;
-        payout -= commissionAmount;
 
-        return { payout, casino_commission: commissionAmount };
+        return { payout: payout - commissionAmount, casino_commission: commissionAmount };
     }
 
     /**
@@ -70,26 +73,45 @@ class Casino {
      * @returns {boolean} - Выиграл ли пользователь.
      */
     static isBetWin(result, betType) {
-        switch (betType) {
-            case "красный":
-                return result.color === "red";
-            case "черный":
-                return result.color === "black";
-            case "четное":
-                return result.number !== 0 && result.number % 2 === 0;
-            case "нечетное":
-                return result.number % 2 !== 0;
-            case "дюжина1":
-                return result.number >= 1 && result.number <= 12;
-            case "дюжина2":
-                return result.number >= 13 && result.number <= 24;
-            case "дюжина3":
-                return result.number >= 25 && result.number <= 36;
-            case "зеленый":
-                return result.color === "green";
-            default:
-                return false;
+        const number = result.number;
+        const color = result.color;
+
+        const winConditions = {
+            красный: () => color === "red",
+            черный: () => color === "black",
+            четное: () => number !== 0 && number % 2 === 0,
+            нечетное: () => number !== 0 && number % 2 !== 0,
+            дюжина1: () => number >= 1 && number <= 12,
+            дюжина2: () => number >= 13 && number <= 24,
+            дюжина3: () => number >= 25 && number <= 36,
+            зеленый: () => color === "green",
+        };
+
+        const condition = winConditions[betType];
+        return condition ? condition() : false;
+    }
+
+    /**
+     * Получает пользователя и данные казино.
+     * @param {number} userId - ID пользователя.
+     * @returns {object} - Объект с пользователем и данными казино.
+     * @throws {Error} - Если пользователь или данные казино не найдены.
+     */
+    static async getUserAndCasino(userId) {
+        const [user, casinoData] = await Promise.all([
+            UserService.findUserById(userId),
+            CasinoService.findCasinoByUserID(userId),
+        ]);
+
+        if (!user) {
+            throw new Error("Пользователь не найден");
         }
+
+        if (!casinoData || !casinoData.casino_bookmaker) {
+            throw new Error("Нет данных казино для пользователя");
+        }
+
+        return { user, casinoData };
     }
 
     /**
@@ -102,45 +124,22 @@ class Casino {
      */
     static async processBet(context, betType, betAmount) {
         const userId = context.from.id;
-        const user = await UserService.findUserById(userId);
-        if (!user) {
-            throw new Error("Пользователь не найден");
-        }
-
-        const casinoData = await CasinoService.findCasinoByUserID(userId);
-        const position = user.user_position;
-        if (!casinoData || !casinoData.casino_bookmaker) {
-            return await context.send(CasinoView.getErrorNoCasinoMessage(position, user), { parse_mode: "HTML" });
-        }
+        const { user, casinoData } = await Casino.getUserAndCasino(userId);
 
         let casinoBalance = parseFloat(casinoData.casino_balance);
 
         if (typeof betAmount === "string") {
-            if (betAmount.includes("%")) {
-                const percentage = parseFloat(betAmount.replace("%", ""));
-                if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
-                    throw new Error("Указан некорректный процент ставки");
-                }
-                betAmount = (casinoBalance * percentage) / 100;
-            } else if (betAmount === "все" || betAmount === "всё") {
-                betAmount = casinoBalance;
-            } else {
-                betAmount = Casino.parseBetAmount(betAmount);
-                if (isNaN(betAmount) || betAmount <= 0) {
-                    throw new Error("Указана некорректная сумма ставки");
-                }
-            }
+            betAmount = Casino.parseBetAmountString(betAmount, casinoBalance);
         }
 
         if (casinoBalance < betAmount) {
-            throw new Error("Недостаточно средств в балансе казино");
+            throw new Error("Ставка превышает баланс казино");
         }
 
-        const { casino_bookmaker, casino_coefficient, casino_chance, casino_commission } = casinoData;
+        const { casino_bookmaker, casino_coefficient, casino_commission } = casinoData;
 
-        let result = Casino.spinWheel();
-
-        let isWin = Casino.isBetWin(result, betType);
+        const result = Casino.spinWheel();
+        const isWin = Casino.isBetWin(result, betType);
 
         let payout = 0.0;
         let commissionAmount = 0.0;
@@ -168,26 +167,79 @@ class Casino {
     }
 
     /**
-     * Пополняет баланс казино пользователя.
-     * @param {object} context - Контекст пользователя.
-     * @param {number} amount - Сумма пополнения.
+     * Парсит строку суммы ставки, включая процентные и все ставки.
+     * @param {string} betAmountStr - Строка суммы ставки.
+     * @param {number} casinoBalance - Баланс казино.
+     * @returns {number} - Числовое значение суммы ставки.
+     * @throws {Error} - Если сумма некорректна.
      */
-    static async depositToCasino(context, amount) {
+    static parseBetAmountString(betAmountStr, casinoBalance) {
+        const trimmed = betAmountStr.trim().toLowerCase();
+
+        if (trimmed.includes("%")) {
+            const percentage = parseFloat(trimmed.replace("%", ""));
+            if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
+                throw new Error("Некорректный процент ставки");
+            }
+            if (((casinoBalance * percentage) / 100) == 0) {
+                if (casinoBalance === 0) {
+                    throw new Error("Нельзя поставить нулевую сумму ставки");
+                }
+            }
+            return (casinoBalance * percentage) / 100;
+        }
+
+        if (trimmed === "все" || trimmed === "всё") {
+            if (casinoBalance === 0) {
+                throw new Error("Нельзя поставить нулевую сумму ставки");
+            }
+            return casinoBalance;
+        }
+
+        return Casino.parseBetAmount(trimmed);
+    }
+
+    /**
+     * Универсальный метод для обработки транзакций (депозит и вывод).
+     * @param {object} context - Контекст пользователя.
+     * @param {number} amount - Сумма транзакции.
+     * @param {string} type - Тип транзакции ('deposit' или 'withdraw').
+     */
+    static async handleTransaction(context, amount, type) {
         const userId = context.from.id;
-
         try {
-            const depositResult = await CasinoService.depositToCasino(userId, amount);
-            const user = await UserService.findUserById(userId);
+            const [casinoData, user] = await Promise.all([
+                CasinoService.findCasinoByUserID(userId),
+                UserService.findUserById(userId)
+            ]);
 
-            await context.reply(
-                CasinoView.getDepositSuccessMessage(
-                    user.user_name,
-                    formatCurrency(amount),
-                    formatCurrency(depositResult.newCasinoBalance),
-                    formatCurrency(depositResult.newBankAmount)
-                ),
-                { parse_mode: "HTML" }
-            );
+            if (!casinoData || !casinoData.casino_bookmaker) {
+                return await context.send(CasinoView.getErrorNoCasinoMessage(user.user_position, user), { parse_mode: "HTML" });
+            }
+
+            if (type === 'deposit') {
+                const depositResult = await CasinoService.depositToCasino(userId, amount);
+                await context.reply(
+                    CasinoView.getDepositSuccessMessage(
+                        user.user_name,
+                        formatCurrency(amount),
+                        formatCurrency(depositResult.newCasinoBalance),
+                        formatCurrency(depositResult.newBankAmount)
+                    ),
+                    { parse_mode: "HTML" }
+                );
+            } else if (type === 'withdraw') {
+                const withdrawResult = await CasinoService.withdrawFromCasino(userId, amount);
+                await context.reply(
+                    CasinoView.getWithdrawSuccessMessage(
+                        user.user_name,
+                        formatCurrency(amount),
+                        formatCurrency(withdrawResult.newCasinoBalance),
+                        formatCurrency(withdrawResult.newBankAmount)
+                    ),
+                    { parse_mode: "HTML" }
+                );
+            }
         } catch (error) {
             await context.reply(CasinoView.getErrorMessage(error.message));
         }
@@ -195,7 +247,7 @@ class Casino {
 
     /**
      * Обрабатывает команду пополнения баланса казино.
-     * Пример команды: "пополнить 500"
+     * Пример команды: "пополнить казино 500"
      * @param {object} context - Контекст пользователя.
      */
     static async handleDepositCommand(context) {
@@ -204,31 +256,36 @@ class Casino {
         const args = input.split(/\s+/);
         const amountStr = args[2];
         const userId = context.from.id;
-        const casinoData = await CasinoService.findCasinoByUserID(userId);
-        const user = await UserService.findUserById(context.from.id);
-        const position = user.user_position;
-        if (!casinoData || !casinoData.casino_bookmaker) {
-            return await context.send(CasinoView.getErrorNoCasinoMessage(position, user), { parse_mode: "HTML" });
-        }
-        if (!amountStr) {
-            return await context.reply(CasinoView.getDepositHelpMessage(), { parse_mode: "HTML" });
-        }
 
         try {
+            const { user, casinoData } = await Casino.getUserAndCasino(userId);
+            const position = user.user_position;
+
+            if (!amountStr) {
+                return await context.reply(CasinoView.getDepositHelpMessage(), { parse_mode: "HTML" });
+            }
+
             const amount = Casino.parseBetAmount(amountStr);
             if (isNaN(amount) || amount <= 0) {
                 throw new Error("Указана некорректная сумма для пополнения.");
             }
 
-            await Casino.depositToCasino(context, amount);
+            await Casino.handleTransaction(context, amount, 'deposit');
         } catch (error) {
-            await context.reply(CasinoView.getErrorMessage(error.message));
+            let errorMessage = "";
+            if (error.message === "Нет данных казино для пользователя") {
+                const user = await UserService.findUserById(userId);
+                errorMessage = CasinoView.getErrorNoCasinoMessage(user.user_position, user);
+            } else {
+                errorMessage = CasinoView.getErrorMessage(error.message);
+            }
+            await context.reply(errorMessage, { parse_mode: "HTML" });
         }
     }
 
     /**
      * Обрабатывает команду вывода средств из баланса казино.
-     * Пример команды: "вывести 500"
+     * Пример команды: "вывести казино 500"
      * @param {object} context - Контекст пользователя.
      */
     static async handleWithdrawCommand(context) {
@@ -237,37 +294,30 @@ class Casino {
         const args = input.split(/\s+/);
         const amountStr = args[2];
         const userId = context.from.id;
-        const casinoData = await CasinoService.findCasinoByUserID(userId);
-        const user = await UserService.findUserById(context.from.id);
-        const position = user.user_position;
-        if (!casinoData || !casinoData.casino_bookmaker) {
-            return await context.send(CasinoView.getErrorNoCasinoMessage(position, user), { parse_mode: "HTML" });
-        }
-        if (!amountStr) {
-            return await context.reply(CasinoView.getWithdrawHelpMessage());
-        }
 
         try {
+            const { user, casinoData } = await Casino.getUserAndCasino(userId);
+            const position = user.user_position;
+
+            if (!amountStr) {
+                return await context.reply(CasinoView.getWithdrawHelpMessage(), { parse_mode: "HTML" });
+            }
+
             const amount = Casino.parseBetAmount(amountStr);
             if (isNaN(amount) || amount <= 0) {
                 throw new Error("Указана некорректная сумма для вывода.");
             }
 
-            const userId = context.from.id;
-            const withdrawResult = await CasinoService.withdrawFromCasino(userId, amount);
-            const user = await UserService.findUserById(userId);
-
-            await context.reply(
-                CasinoView.getWithdrawSuccessMessage(
-                    user.user_name,
-                    formatCurrency(amount),
-                    formatCurrency(withdrawResult.newCasinoBalance),
-                    formatCurrency(withdrawResult.newBankAmount)
-                ),
-                { parse_mode: "HTML" }
-            );
+            await Casino.handleTransaction(context, amount, 'withdraw');
         } catch (error) {
-            await context.reply(CasinoView.getErrorMessage(error.message));
+            let errorMessage = "";
+            if (error.message === "Нет данных казино для пользователя") {
+                const user = await UserService.findUserById(userId);
+                errorMessage = CasinoView.getErrorNoCasinoMessage(user.user_position, user);
+            } else {
+                errorMessage = CasinoView.getErrorMessage(error.message);
+            }
+            await context.reply(errorMessage, { parse_mode: "HTML" });
         }
     }
 
@@ -278,61 +328,83 @@ class Casino {
      */
     static async handleCasinoCommand(context) {
         await UserService.addUserIfNotExists(context);
-        const input = context.text
-            .replace(/казино/i, "")
-            .trim()
-            .toLowerCase();
+        const input = context.text.replace(/^казино\s+/i, "").trim().toLowerCase();
         const args = input.split(/\s+/);
         const [betTypeInput, ...amountParts] = args;
         const amountStr = amountParts.join(" ");
         const betType = Constants.BET_TYPE_MAP[betTypeInput] || betTypeInput;
         const userId = context.from.id;
-        const casinoData = await CasinoService.findCasinoByUserID(userId);
-        const user = await UserService.findUserById(context.from.id);
-        const position = user.user_position;
-        if (!casinoData || !casinoData.casino_bookmaker) {
-            return await context.send(CasinoView.getErrorNoCasinoMessage(position, user), { parse_mode: "HTML" });
-        }
-        if (!betTypeInput || !amountStr) {
-            return await context.reply(CasinoView.getHelpMessage(), {parse_mode: "HTML"});
-        }
-
-        if (!Constants.VALID_BET_TYPES.has(betType)) {
-            return await context.reply(CasinoView.getInvalidBetTypeMessage(), {parse_mode: "HTML"});
-        }
 
         try {
+            const { user, casinoData } = await Casino.getUserAndCasino(userId);
+            const position = user.user_position;
+
+            if (!betTypeInput || !amountStr) {
+                return await context.reply(CasinoView.getHelpMessage(), { parse_mode: "HTML" });
+            }
+
+            if (!Constants.VALID_BET_TYPES.has(betType)) {
+                return await context.reply(CasinoView.getInvalidBetTypeMessage(), { parse_mode: "HTML" });
+            }
+
             const response = await Casino.processBet(context, betType, amountStr);
-            const user = await UserService.findUserById(context.from.id);
+            const updatedUser = await UserService.findUserById(userId);
 
             if (response.win) {
                 await context.reply(
                     CasinoView.getWinMessage(
-                        user.user_name,
+                        updatedUser.user_name,
                         response.payout,
                         response.result,
                         response.newBalance,
                         response.casino_commission,
                         response.casino_bookmaker,
-                        user.user_position
+                        updatedUser.user_position
                     ),
                     { parse_mode: "HTML" }
                 );
             } else {
                 await context.reply(
                     CasinoView.getLoseMessage(
-                        user.user_name,
+                        updatedUser.user_name,
                         response.betAmount,
                         response.result,
                         response.newBalance,
                         response.casino_bookmaker,
-                        user.user_position
+                        updatedUser.user_position
                     ),
                     { parse_mode: "HTML" }
                 );
             }
         } catch (error) {
-            await context.reply(CasinoView.getErrorMessage(error.message));
+            let errorMessage = "";
+            const user = await UserService.findUserById(userId);
+            const position = user ? user.user_position : null;
+
+            switch (error.message) {
+                case "Нельзя поставить нулевую сумму ставки":
+                    errorMessage = CasinoView.getIncorrectBetAmountMessage('0');
+                    break;
+                case "Ставка превышает баланс казино":
+                    errorMessage = CasinoView.getIncorrectBetAmountMessage('betMoreThanCasino');
+                    break;
+                case "Нет данных казино для пользователя":
+                    errorMessage = CasinoView.getErrorNoCasinoMessage(position, user);
+                    break;
+                case "Некорректный процент ставки":
+                    errorMessage = CasinoView.getIncorrectBetAmountMessage('%');
+                    break;
+                case "Некорректная сумма ставки":
+                    errorMessage = CasinoView.getIncorrectBetAmountMessage('incorrect');
+                    break;
+                case "Пользователь не найден":
+                    errorMessage = CasinoView.getErrorMessage(error.message);
+                    break;
+                default:
+                    errorMessage = CasinoView.getErrorMessage("Неизвестная ошибка.");
+            }
+
+            await context.reply(errorMessage, { parse_mode: "HTML" });
         }
     }
 }
