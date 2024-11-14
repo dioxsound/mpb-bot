@@ -1,10 +1,11 @@
 import formatCurrency from "../services/format_currency.js";
+
 class CasinoView {
     static positionDictionary = {
         1: { emoji: "🧟‍♂️", pronouns: "ты" },
         2: { emoji: "🎭", pronouns: "ты" },
         3: { emoji: "⛩", pronouns: "ты" },
-        4: { emoji: "🫴🏼", pronouns: "ты" },
+        4: { emoji: "🫴🏼", pronouns: "Вы" },
         5: { emoji: "🤴🏻", pronouns: "Вы" },
     };
 
@@ -78,11 +79,13 @@ class CasinoView {
     }
 
     static getDepositHelpMessage() {
-        return `<b>❔ Как пополнить баланс казино:</b>\n` + `  –   Команда <code>пополнить казино <сумма></code>`;
+        return `<b>❔ Как пополнить баланс казино:</b>\n` + 
+        `  –   Команда <code>пополнить казино [сумма]</code>`;
     }
 
     static getWithdrawHelpMessage() {
-        return `<b>❔ Как вывести баланс из казино:</b>\n` + `  –   Команда <code>вывести казино <сумма></code>`;
+        return `<b>❔ Как вывести баланс из казино:</b>\n` + 
+        `  –   Команда <code>вывести казино [сумма]</code>`;
     }
 
     static getDepositSuccessMessage(userName, amount, newCasinoBalance, newBankAmount) {
@@ -160,6 +163,21 @@ class CasinoView {
             `<b>🫥 ${name}, ${pronouns === "ты" ? "ты не выбрал" : "Вы не выбрали"} букмекера :(</b>\n` +
             `  –   Команда: <code>букмекер [букмекер]</code>`
         );
+    }
+
+    static getIncorrectBetAmountMessage(option) {
+        if (option == "%") {
+            return `<b>Не, ☝🏼 указан некорректный процент ставки</b>`;
+        }
+        if (option == "0") {
+            return `<b>Не, ☝🏼 нельзя поставить нулевую сумму ставки</b>`;
+        }
+        if (option == "incorrect") {
+            return `<b>Не, ☝🏼 указана некорректная сумма ставки</b>`;
+        }
+        if (option == "betMoreThanCasino") {
+            return `<b>Недостаточно баланса в казино</b>`;
+        }
     }
 }
 
