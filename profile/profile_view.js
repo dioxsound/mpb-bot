@@ -34,13 +34,15 @@ export default class ProfileView {
         const pronouns = positionData.pronouns;
 
         let formattedDateString;
-        if (position === 5) {
-            formattedDateString = "██.██.██";
-        } else {
-            const formattedDate = new Date(date_spawn);
+        const formattedDate = new Date(date_spawn);
             const day = String(formattedDate.getDate()).padStart(2, "0");
             const month = String(formattedDate.getMonth() + 1).padStart(2, "0");
             const year = String(formattedDate.getFullYear()).slice(2);
+        if (position === 5) {
+            formattedDateString = "██.██.██";
+        } else if (position === 4) {
+            formattedDateString = `?${day.slice(-1)}.${month}.??`;
+        } else {
             formattedDateString = `${day}.${month}.${year}`;
         }
 
