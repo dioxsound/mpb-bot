@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS people (
     user_level INTEGER DEFAULT 1,
     user_position INTEGER DEFAULT 1,
     user_passport VARCHAR(6) NOT NULL,
-    user_status VARCHAR(12) DEFAULT 'существует',
+    user_status VARCHAR(12) DEFAULT 'в рассудке',
     date_spawn DATE NOT NULL,
     ban_reason TEXT
 );
