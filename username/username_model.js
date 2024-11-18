@@ -3,7 +3,7 @@ import UserService from "../database_services/user_service.js";
 import UsernameView from "./username_view.js";
 import BankService from "../database_services/bank_service.js";
 import formatCurrency from "../services/format_currency.js";
-import { FORBIDDEN_USERNAMES, MIN_BANK_BALANCE, USERNAME_LENGTH, CURRENCY_UPDATE_AMOUNT } from "./constants";
+import { FORBIDDEN_USERNAMES, MIN_BANK_BALANCE, USERNAME_LENGTH, CURRENCY_UPDATE_AMOUNT } from "./constants.js";
 
 export default class UsernameModel {
     static forbiddenRegex = new RegExp(`(${FORBIDDEN_USERNAMES.join("|")})`, "i");
