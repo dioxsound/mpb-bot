@@ -4,6 +4,8 @@ import { HearManager } from "@puregram/hear";
 
 import DatabaseManager from "./database_manager/database_manager.js"
 
+import CommandsViewModel from "./commands/commands_viewmodel.js"
+
 import CasinoWheelModel from "./casino_wheel/casino_wheel_model.js";
 import WheelTransactionModel from "./casino_wheel/wheel_transaction_model.js";
 import BookmakerModel from "./bookmaker/bookmaker_model.js";
@@ -40,5 +42,9 @@ hearManager.hear(/^профиль(?:\s+(.+))?$/i, UserProfileModel.viewUserProfi
  */
 hearManager.hear(/^банк(?:\s+(.+))?$/i, BankProfileModel.viewBankProfile);
 hearManager.hear(/^перевести(?:\s+(.+))?$/i, BankTransferModel.transferMoney);
+/*  Команды для просмотра команд
+ *  Команды для просмотра команд
+ */
+hearManager.hear(/^команды/i, CommandsViewModel.showCommands);
 
 telegram.updates.startPolling();
