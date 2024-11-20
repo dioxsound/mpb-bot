@@ -40,7 +40,7 @@ export default class LeaderboardBankModel {
     }
 
     static async sendTopPlayers(context) {
-        await UserService.addUserIfNotExists(context.from.id)
+        await UserService.addUserIfNotExists(context)
         try {
             const leaders = await LeaderboardBankModel.getTopPlayers();
             if (leaders.length === 0) {
