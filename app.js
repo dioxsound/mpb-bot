@@ -16,6 +16,8 @@ import UserProfileModel from "./user_profile/user_profile_model.js";
 import BankProfileModel from "./bank/bank_profile/bank_profile_model.js";
 import BankTransferModel from "./bank/bank_transfer/bank_transfer_model.js";
 
+import LeaderboardBankModel from "./leaderstats/leaderboard_bank_model.js";
+
 const telegram = Telegram.fromToken(process.env.BOT_TOKEN);
 const hearManager = new HearManager();
 
@@ -35,7 +37,7 @@ hearManager.hear(/^букмекер(?:\s+(.+))?$/i, BookmakerModel.chooseBookmak
 /*  Команды для просмотра профиля
  *  Команды для просмотра профиля
  */
-hearManager.hear(/^никнейм(?:\s+(.+))?$/i, UsernameModel.changeUsername);
+hearManager.hear(/^никнейм\s+([^\s]{3,20})$/i, UsernameModel.changeUsername);
 hearManager.hear(/^профиль(?:\s+(.+))?$/i, UserProfileModel.viewUserProfile);
 /*  Команды для банка
  *  Команды для банка
@@ -46,5 +48,8 @@ hearManager.hear(/^перевести(?:\s+(.+))?$/i, BankTransferModel.transfer
  *  Команды для просмотра команд
  */
 hearManager.hear(/^команды/i, CommandsViewModel.showCommands);
+hearManager.hear(/^топ банк/i, LeaderboardBankModel.sendTopPlayers);
+
+
 
 telegram.updates.startPolling();
