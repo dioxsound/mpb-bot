@@ -79,6 +79,10 @@ class CasinoWheelModel {
             betAmount = CasinoWheelModel.parseBetAmountString(betAmount, casinoBalance);
         }
 
+        if (betAmount == 0) {
+            throw new Error("Нельзя поставить нулевую сумму ставки");
+        }
+
         if (casinoBalance < betAmount) {
             throw new Error("Ставка превышает баланс казино");
         }

@@ -14,10 +14,9 @@ class WheelTransactionModel {
             ]);
 
             if (!casinoData || !casinoData.casino_bookmaker) {
-                return await context.reply(
-                    CasinoWheelView.getErrorNoCasinoMessage(user.user_position, user),
-                    { parse_mode: "HTML" }
-                );
+                return await context.reply(CasinoWheelView.getErrorNoCasinoMessage(user.user_position, user), {
+                    parse_mode: "HTML",
+                });
             }
 
             if (type === "deposit") {
@@ -45,7 +44,7 @@ class WheelTransactionModel {
                 );
             }
         } catch (error) {
-            await context.reply(CasinoWheelView.getErrorMessage(error.message));
+            await context.reply(CasinoWheelView.getErrorMessage(error.message), { parse_mode: "HTML" });
         }
     }
 
