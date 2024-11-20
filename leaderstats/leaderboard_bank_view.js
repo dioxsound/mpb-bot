@@ -11,7 +11,7 @@ export default class LeaderboardBankView {
 
 
     static regularPlayerEntry(rank, username, user_id, total) {
-        return `${rank} <b><a href="tg://user?id=${user_id}">${username}</a>:</b> <code>${total}</code>\n`;
+        return `[${rank}]  <b><a href="tg://user?id=${user_id}">${username}</a>:</b> <code>${total}</code>\n`;
 
     }
 

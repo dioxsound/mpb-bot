@@ -46,7 +46,7 @@ export default class LeaderboardBankModel {
             if (leaders.length === 0) {
                 return context.reply(LeaderboardBankView.emptyLeaderboardMessage());
             }
-
+            console.log(leaders);
             let message = LeaderboardBankView.headerMessage();
             leaders.forEach((leader, index) => {
                 const formattedTotal = LeaderboardBankModel.formatNumber(parseFloat(leader.Total));
