@@ -37,7 +37,7 @@ hearManager.hear(/^букмекер(?:\s+(.+))?$/i, BookmakerModel.chooseBookmak
 /*  Команды для просмотра профиля
  *  Команды для просмотра профиля
  */
-hearManager.hear(/^никнейм\s+([^\s]{3,20})$/i, UsernameModel.changeUsername);
+hearManager.hear(/^никнейм(?:\s+(.+))?$/i, UsernameModel.changeUsername);
 hearManager.hear(/^профиль(?:\s+(.+))?$/i, UserProfileModel.viewUserProfile);
 /*  Команды для банка
  *  Команды для банка
