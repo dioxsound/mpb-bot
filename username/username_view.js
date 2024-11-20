@@ -37,6 +37,10 @@ export default class UsernameView {
         );
     }
 
+    static usernameNotUnique() {
+        return `<b>⚠️ Ошибка смены никнейма: </b>` + `<code>такой никнейм занят!</code>`;
+    }
+
     static errorChangingUsername(error) {
         return `<b>⚠️ Ошибка смены никнейма: </b>` + `<code>${error}</code>`;
     }

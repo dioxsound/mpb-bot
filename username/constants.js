@@ -10,6 +10,8 @@ const FORBIDDEN_USERNAMES = [
      */
     "пут",
     "put",
+    "tin",
+    "тин",
     "зелен",
     "zelen",
     "байд",
@@ -18,8 +20,8 @@ const FORBIDDEN_USERNAMES = [
     "trump",
     "шойгу",
     "shoygu",
-    "кадыр",
-    "kadir",
+    "кад",
+    "kad",
     /**
      * запрещёнка тг
      */
@@ -42,7 +44,7 @@ const FORBIDDEN_USERNAMES = [
     /**
      * звания админ. и донат. состава
      */
-    "создатель",
+    "созд",
     "creator",
     "dev",
     "дев",
@@ -55,6 +57,9 @@ const FORBIDDEN_USERNAMES = [
     "mod",
     "прав",
     "разр",
+    "аза",
+    "анд",
+    "мат"
 ];
 
 
