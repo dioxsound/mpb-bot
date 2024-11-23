@@ -1,11 +1,12 @@
-import pool from "../database_services/config_model.js";
-import UserService from "../database_services/user_service.js";
-import UsernameView from "./username_view.js";
-import BankService from "../database_services/bank_service.js";
-import formatCurrency from "../services/format_currency.js";
-import { FORBIDDEN_USERNAMES, MIN_BANK_BALANCE, USERNAME_LENGTH, CURRENCY_UPDATE_AMOUNT } from "./constants.js";
+import pool from "../../database_services/config_model.js";
+import UserService from "../../database_services/user_service.js";
+import UsernameView from "./username_change_view.js";
+import UsernameService from "../../database_services/username_service.js";
+import BankService from "../../database_services/bank_service.js";
+import formatCurrency from "../../services/format_currency.js";
+import { FORBIDDEN_USERNAMES, MIN_BANK_BALANCE, USERNAME_LENGTH, CURRENCY_UPDATE_AMOUNT } from "../constants.js";
 
-export default class UsernameModel {
+export default class UsernameChangeModel {
     static forbiddenRegex = new RegExp(`(${FORBIDDEN_USERNAMES.join("|")})`, "i");
 
     static async changeUsername(context) {
@@ -15,14 +16,19 @@ export default class UsernameModel {
             const bank = await BankService.findBanksByUserId(userId);
             const user = await UserService.findUserById(userId);
 
-            let newUserName = UsernameModel.extractUsername(context.text);
+            let newUserName = UsernameChangeModel.extractUsername(context.text);
             if (!newUserName) {
                 return await context.reply(UsernameView.noUsernameProvided(user.user_name, CURRENCY_UPDATE_AMOUNT), {
                     parse_mode: "HTML",
                 });
             }
 
-            const funds = UsernameModel.hasSufficientFunds(bank);
+            const isSelling = await UsernameService.isUserSelling(userId);
+            if (isSelling) {
+                return await context.reply(UsernameView.cannotBuyUsernameWhenSelling(), { parse_mode: "HTML" });
+            }
+
+            const funds = UsernameChangeModel.hasSufficientFunds(bank);
             if (!funds.hasFunds) {
                 const deficiency = formatCurrency(
                     MIN_BANK_BALANCE - (funds.account === "bank_acc_one" ? bank.bank_acc_one : bank.bank_acc_two)
@@ -30,12 +36,12 @@ export default class UsernameModel {
                 return await context.reply(UsernameView.insufficientFunds(deficiency), { parse_mode: "HTML" });
             }
 
-            const validationError = await UsernameModel.validateUsername(newUserName, user.user_name, userId);
+            const validationError = await UsernameChangeModel.validateUsername(newUserName, user.user_name, userId);
             if (validationError) {
                 return await context.reply(validationError, { parse_mode: "HTML" });
             }
 
-            const changeUsernameResult = await UsernameModel.updateUsernameInDB(newUserName, userId);
+            const changeUsernameResult = await UsernameChangeModel.updateUsernameInDB(newUserName, userId);
 
             if (funds.account === "bank_acc_one") {
                 await BankService.updateBankAccount(userId, 1, bank.bank_acc_one - CURRENCY_UPDATE_AMOUNT);
@@ -73,7 +79,6 @@ export default class UsernameModel {
         return username;
     }
 
-   
     static async validateUsername(newUserName, currentUserName, userId) {
         if (newUserName === currentUserName) {
             return UsernameView.sameUsername();
@@ -83,22 +88,22 @@ export default class UsernameModel {
         if (isCaseOnlyChange) {
         }
 
-        if (!UsernameModel.isValidLength(newUserName)) {
+        if (!UsernameChangeModel.isValidLength(newUserName)) {
             return UsernameView.usernameResponse(
                 false,
                 `Никнейм должен быть от ${USERNAME_LENGTH.MIN} до ${USERNAME_LENGTH.MAX} символов.`
             );
         }
 
-        if (UsernameModel.isForbiddenUsername(newUserName)) {
+        if (UsernameChangeModel.isForbiddenUsername(newUserName)) {
             return UsernameView.forbiddenUsername();
         }
 
-        if (!UsernameModel.hasValidCharacters(newUserName)) {
+        if (!UsernameChangeModel.hasValidCharacters(newUserName)) {
             return UsernameView.invalidCharacters();
         }
 
-        const isUnique = await UsernameModel.isUsernameUnique(newUserName, userId);
+        const isUnique = await UsernameChangeModel.isUsernameUnique(newUserName, userId);
         if (!isUnique) {
             return UsernameView.usernameNotUnique();
         }
@@ -111,7 +116,7 @@ export default class UsernameModel {
     }
 
     static isForbiddenUsername(username) {
-        return UsernameModel.forbiddenRegex.test(username);
+        return UsernameChangeModel.forbiddenRegex.test(username);
     }
 
     static hasValidCharacters(username) {
