@@ -2,11 +2,11 @@ import UserService from "../database_services/user_service.js";
 import CasinoService from "../database_services/casino_service.js";
 import CasinoWheelView from "./casino_wheel_view.js";
 import parseAmount from "../services/parse_amount.js";
-import Constants from "./constants.js";
+import CasinoWheelSectors from "./casino_wheel_sectors.js";
 
 class CasinoWheelModel {
     static spinWheel() {
-        const sectors = Constants.SECTORS;
+        const sectors = CasinoWheelSectors.SECTORS;
         if (!sectors.length) {
             throw new Error("Секторы рулетки не определены");
         }
@@ -58,10 +58,6 @@ class CasinoWheelModel {
             CasinoService.findCasinoByUserID(userId),
         ]);
 
-        if (!user) {
-            throw new Error("Пользователь не найден");
-        }
-
         if (!casinoData || !casinoData.casino_bookmaker) {
             throw new Error("Нет данных казино для пользователя");
         }
@@ -69,23 +65,15 @@ class CasinoWheelModel {
         return { user, casinoData };
     }
 
-    static async processBet(context, betType, betAmount) {
+    static async processBet(context, betType, betAmountStr) {
         const userId = context.from.id;
         const { user, casinoData } = await CasinoWheelModel.getUserAndCasino(userId);
 
         let casinoBalance = parseFloat(casinoData.casino_balance);
 
-        if (typeof betAmount === "string") {
-            betAmount = CasinoWheelModel.parseBetAmountString(betAmount, casinoBalance);
-        }
+        // Используем parseAmount для обработки суммы ставки
+        let betAmount = parseAmount(betAmountStr, casinoBalance, { allowAll: true });
 
-        if (betAmount == 0) {
-            throw new Error("Нельзя поставить нулевую сумму ставки");
-        }
-
-        if (casinoBalance < betAmount) {
-            throw new Error("Ставка превышает баланс казино");
-        }
 
         const { casino_bookmaker, casino_coefficient, casino_commission } = casinoData;
 
@@ -122,32 +110,6 @@ class CasinoWheelModel {
         };
     }
 
-    static parseBetAmountString(betAmountStr, casinoBalance) {
-        const trimmed = betAmountStr.trim().toLowerCase();
-
-        if (trimmed.includes("%")) {
-            const percentage = parseFloat(trimmed.replace("%", ""));
-            if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
-                throw new Error("Некорректный процент ставки");
-            }
-            if ((casinoBalance * percentage) / 100 === 0) {
-                if (casinoBalance === 0) {
-                    throw new Error("Нельзя поставить нулевую сумму ставки");
-                }
-            }
-            return (casinoBalance * percentage) / 100;
-        }
-
-        if (trimmed === "все" || trimmed === "всё") {
-            if (casinoBalance === 0) {
-                throw new Error("Нельзя поставить нулевую сумму ставки");
-            }
-            return casinoBalance;
-        }
-
-        return parseAmount(trimmed);
-    }
-
     static async handleCasinoCommand(context) {
         await UserService.addUserIfNotExists(context);
         const input = context.text
@@ -157,7 +119,7 @@ class CasinoWheelModel {
         const args = input.split(/\s+/);
         const [betTypeInput, ...amountParts] = args;
         const amountStr = amountParts.join(" ");
-        const betType = Constants.BET_TYPE_MAP[betTypeInput] || betTypeInput;
+        const betType = CasinoWheelSectors.mapBetType(betTypeInput);
         const userId = context.from.id;
 
         try {
@@ -167,7 +129,7 @@ class CasinoWheelModel {
                 return await context.reply(CasinoWheelView.getHelpMessage(), { parse_mode: "HTML" });
             }
 
-            if (!Constants.VALID_BET_TYPES.has(betType)) {
+            if (!CasinoWheelSectors.VALID_BET_TYPES.has(betType)) {
                 return await context.reply(CasinoWheelView.getInvalidBetTypeMessage(), { parse_mode: "HTML" });
             }
 
@@ -201,31 +163,15 @@ class CasinoWheelModel {
                 );
             }
         } catch (error) {
-            let errorMessage = "";
-            const user = await UserService.findUserById(userId);
-            const position = user ? user.user_position : null;
-
-            switch (error.message) {
-                case "Нельзя поставить нулевую сумму ставки":
-                    errorMessage = CasinoWheelView.getIncorrectBetAmountMessage("0");
-                    break;
-                case "Ставка превышает баланс казино":
-                    errorMessage = CasinoWheelView.getIncorrectBetAmountMessage("betMoreThanCasino");
-                    break;
-                case "Нет данных казино для пользователя":
-                    errorMessage = CasinoWheelView.getErrorNoCasinoMessage(position, user);
-                    break;
-                case "Некорректный процент ставки":
-                    errorMessage = CasinoWheelView.getIncorrectBetAmountMessage("%");
-                    break;
-                case "Некорректная сумма ставки":
-                    errorMessage = CasinoWheelView.getIncorrectBetAmountMessage("incorrect");
+            error.code = error.code || "GENERAL_ERROR";
+            switch (error.code) {
+                case "balance_parse":
+                    await context.reply(CasinoWheelView.getAmountError(error.message), { parse_mode: "HTML" })
                     break;
                 default:
-                    errorMessage = CasinoWheelView.getErrorMessage(error.message);
+                    await context.reply(CasinoWheelView.getAmountError(error.message), { parse_mode: "HTML" })
+                    break;
             }
-
-            await context.reply(errorMessage, { parse_mode: "HTML" });
         }
     }
 }

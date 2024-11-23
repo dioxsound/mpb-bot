@@ -127,23 +127,16 @@ class CasinoWheelView {
         );
     }
 
-    static getInvalidBankAccMessage() {
-        return `<b>⚠️ Ошибка суммы: </b><code>некорректный номер банковского счета, используйте 1 или 2!</code>`
+    static getBankAccError(error) {
+        return `<b>[🚫💳] Ошибка банка: </b><code>${error}</code>`
     }
 
-    static getIncorrectBetAmountMessage(option) {
-        switch (option) {
-            case "%":
-                return `<b>⚠️ Ошибка суммы: </b><code>некорректный процент ставки!</code>`
-            case "0":
-                return `<b>⚠️ Ошибка суммы: </b><code>нельзя поставить нуль!</code>`
-            case "incorrect":
-                return `<b>⚠️ Ошибка суммы: </b><code>используйте "все", проценты или суффиксы!</code>`
-            case "betMoreThanCasino":
-                return `<b>⚠️ Ошибка суммы: </b><code>недостаточно баланса в казино!</code>`
-            default:
-                return `<b>⚠️ Ошибка суммы: </b><code>некорректная сумма ставки!</code>`
-        }
+    static getInvalidBankAccMessage() {
+        return `<b>[🚫💳] Ошибка банка: </b><code>некорректный номер банк. счета, используйте 1 или 2!</code>`
+    }
+
+    static getAmountError(error) {
+        return `<b>[🚫💸] Ошибка суммы: </b><code>${error}</code>`
     }
 
     static getErrorNoCasinoMessage(position, user) {
