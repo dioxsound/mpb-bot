@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS people, bank, casino
+DROP TABLE IF EXISTS people, bank, casino, username_sales

@@ -8,22 +8,14 @@ CREATE TABLE IF NOT EXISTS people (
     date_spawn DATE NOT NULL,
     ban_reason TEXT
 );
-
-
-
-
-CREATE TABLE IF NOT EXISTS bank
-(
+CREATE TABLE IF NOT EXISTS bank (
     bank_id VARCHAR(16) UNIQUE CHECK (bank_id ~ '^[0-9]{1,16}$'),
     bank_acc_one DECIMAL(16, 2) DEFAULT 400000.00,
     bank_acc_two DECIMAL(16, 2) DEFAULT 0.00,
     user_id BIGINT UNIQUE REFERENCES people(user_id),
-    bank_name VARCHAR(50)  DEFAULT 'Смирнофф Блэк (S-Bank)'
+    bank_name VARCHAR(50) DEFAULT 'Смирнофф Блэк (S-Bank)'
 );
-
-
-CREATE TABLE IF NOT EXISTS casino
-(
+CREATE TABLE IF NOT EXISTS casino (
     casino_id SERIAL PRIMARY KEY,
     casino_balance DECIMAL(16, 2) DEFAULT 0.00,
     casino_bookmaker VARCHAR(16) NOT NULL,
@@ -33,6 +25,10 @@ CREATE TABLE IF NOT EXISTS casino
     last_change TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     user_id BIGINT UNIQUE REFERENCES people(user_id)
 );
-
-
-
+CREATE TABLE IF NOT EXISTS username_sales (
+    sale_id SERIAL PRIMARY KEY,
+    user_id BIGINT UNIQUE NOT NULL,
+    user_name VARCHAR(50) UNIQUE NOT NULL,
+    sale_price NUMERIC(12, 2) NOT NULL,
+    listed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
