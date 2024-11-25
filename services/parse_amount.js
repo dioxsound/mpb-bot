@@ -13,12 +13,13 @@ const AMOUNT_SUFFIXES = {
 
 const ALL_KEYWORDS = ["все", "всё", "all"];
 
-export default function parseAmount(amountStr, balance = 0, options = { allowAll: false, checkBalance: true }) {
+export default function parseAmount(amountStr, balance = 0, options = {}) {
+    const { allowAll = false, checkBalance = true } = options;
     const trimmed = amountStr.trim().toLowerCase();
-
-    if (options.allowAll && ALL_KEYWORDS.includes(trimmed)) {
-        if (balance === 0) {
-            const error = new Error("Нельзя использовать нулевую сумму.");
+    
+    if (allowAll && ALL_KEYWORDS.includes(trimmed)) {
+        if (balance <= 0) {
+            const error = new Error("Нельзя использовать нулевую или отрицательную сумму.");
             error.code = "balance_parse";
             throw error;
         }
@@ -26,8 +27,8 @@ export default function parseAmount(amountStr, balance = 0, options = { allowAll
     }
 
     if (trimmed.includes("%")) {
-        if (!balance) {
-            const error = new Error("Необходим баланс для расчета процента.");
+        if (balance <= 0) {
+            const error = new Error("Необходим положительный баланс для расчета процента.");
             error.code = "balance_parse";
             throw error;
         }
@@ -38,23 +39,21 @@ export default function parseAmount(amountStr, balance = 0, options = { allowAll
             error.code = "balance_parse";
             throw error;
         }
+
         const percentage = parseFloat(percentageMatch[1]);
         if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
             const error = new Error("Некорректное значение процента.");
             error.code = "balance_parse";
             throw error;
         }
+
         const calculatedAmount = (balance * percentage) / 100;
         if (calculatedAmount === 0) {
-            if (balance === 0) {
-                const error = new Error("Нельзя использовать нулевую сумму.");
-                error.code = "balance_parse";
-                throw error;
-            }
             const error = new Error("Процент слишком мал для расчета суммы.");
             error.code = "balance_parse";
             throw error;
         }
+
         return calculatedAmount;
     }
 
@@ -78,7 +77,7 @@ export default function parseAmount(amountStr, balance = 0, options = { allowAll
         throw error;
     }
 
-    if (options.checkBalance && finalAmount > balance) {
+    if (checkBalance && finalAmount > balance) {
         const error = new Error("Сумма превышает доступный баланс.");
         error.code = "balance_parse";
         throw error;
